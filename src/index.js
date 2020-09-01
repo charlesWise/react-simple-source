@@ -1,13 +1,36 @@
 // import React from "react";
 // import ReactDOM from "react-dom";
-import React, { Component } from './react';
-import ReactDOM from './react-dom';
 
-class Comp2 extends Component {
+// import React, { Component } from './react';
+// import ReactDOM from './react-dom';
+
+import React from "./MReact";
+import ReactDOM from "./MReact/ReactDOM";
+
+// class Comp2 extends Component {
+//   render() {
+//     return (
+//       <h2>hello, i'm comp2</h2>
+//     )
+//   }
+// }
+
+class Comp2 extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      msg: "something",
+    };
+  }
+  componentDidMount() {
+    this.setState({ msg: "Hello, react~~~" });
+  }
+  onClick = () => {
+    this.setState({ msg: "Hi, react~~~" });
+  };
   render() {
-    return (
-      <h2>hello, i'm comp2</h2>
-    )
+    return <h2 onClick={this.onClick}>hi, class comp! {this.state.msg}</h2>;
   }
 }
 
@@ -22,7 +45,5 @@ const jsx = (
     <Comp2 />
   </div>
 );
-
-console.log(JSON.stringify(jsx, null, 2))
 
 ReactDOM.render(jsx, document.getElementById("root"));
