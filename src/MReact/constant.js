@@ -2,7 +2,7 @@
   常量
 */
 export const HTML_KEY = 'dangerouslySetInnerHTML'
-export const COMPONENT_ID = 'kkbid'
+export const COMPONENT_ID = 'component_id'
 export const VTEXT = 1
 export const VELEMENT = 2
 export const VSTATELESS = 3
