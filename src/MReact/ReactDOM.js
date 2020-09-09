@@ -43,8 +43,11 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
   pendingRendering[id] = true;
   let oldVnode = null;
   let rootNode = null;
-  // 对比
+  /**
+   * 页面初始化进来oldVnode是没有走下面的分支initVnode
+   */
   if ((oldVnode = vnodeStore[id])) {
+    // 对比
     rootNode = compareTwoVnodes(
       oldVnode,
       vnode,
@@ -55,8 +58,10 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
     rootNode = initVnode(vnode, parentContext);
     var childNode = null;
     while ((childNode = container.lastChild)) {
+      // 这个地方就是为什么根里面的节点都会被删除的原因
       container.removeChild(childNode);
     }
+    // 得到真实的节点rootNode appendChild进去
     container.appendChild(rootNode);
   }
   vnodeStore[id] = vnode;
@@ -66,6 +71,9 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
   argsCache = pendingRendering[id];
   delete pendingRendering[id];
 
+  /**
+   * 上面的appendChild是把父组件的追加进去了，剩下子组件处理，需要做批量更新batchUpdate
+   */
   let result = null;
   if (typeof argsCache === "object") {
     result = renderTreeIntoContainer(
@@ -82,7 +90,11 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 
   if (!isPending) {
 		updateQueue.isPending = false;
-		// 队列里面子组件里面的批量更新 开始干活
+    /**
+     * batchUpdate应用场景第一个启动点，还有个是setState时候用户点击事件的启动点event-system中
+     * 生命周期钩子做定时器或者原生事件去激活了setState，这个时候不会异步的行为他们会立刻更新，因为他们没有经过react的合成事件封装
+     * 让队列里面子组件做批量更新，这个时候所有的子组件去更新下自己
+     */
     updateQueue.batchUpdate();
   }
 
@@ -94,6 +106,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 }
 
 function render(vnode, container, callback) {
+  // 把vnode转换成真实node
   return renderTreeIntoContainer(vnode, container, callback);
 }
 

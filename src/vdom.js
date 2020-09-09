@@ -19,7 +19,7 @@ function createElement(vnode) {
   const { type, props } = vnode;
   console.log(props)
   const node = document.createElement(type);
-  const { key, children, ...rest } = props;
+  const { ref, key, children, ...rest } = props;
   Object.keys(rest).forEach(k => {
     if (k === 'className') {
       node.setAttribute('class', rest[k]);
