@@ -89,7 +89,7 @@ export function addEvent(elem, eventType, listener) {
     return;
   }
 
-  let nodeName = elem.nodeName;
+  // let nodeName = elem.nodeName;
 
   if (eventType === "onchange" && supportInputEvent(elem)) {
     addEvent(elem, "oninput", listener);
@@ -110,7 +110,7 @@ export function removeEvent(elem, eventType) {
     return;
   }
 
-  let nodeName = elem.nodeName;
+  // let nodeName = elem.nodeName;
 
   if (eventType === "onchange" && supportInputEvent(elem)) {
     delete eventStore["oninput"];

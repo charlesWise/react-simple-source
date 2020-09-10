@@ -2,7 +2,7 @@
   常量
 */
 export const HTML_KEY = 'dangerouslySetInnerHTML'
-export const COMPONENT_ID = 'component_id'
+export const COMPONENT_ID = 'uid' // 在diff更新中，取缓存中的组件使用
 export const VTEXT = 1
 export const VELEMENT = 2
 export const VSTATELESS = 3

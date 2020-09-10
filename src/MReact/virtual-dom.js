@@ -61,14 +61,14 @@ function updateVnode(vnode, newVnode, node, parentContext) {
   }
 
   // 更新原生标签，不管是函数组件更新还是class组件函数更新最终都会走到原生标签
-  // 如果用户设置innerHTML
+  // 如果用户设置dangerouslySetInnerHTML
   let oldHtml = vnode.props[HTML_KEY] && vnode.props[HTML_KEY].__html;
   if (oldHtml != null) {
-    // 先更新属性，在替换innerHTML
+    // 先更新自己属性，再替换dangerouslySetInnerHTML内容
     updateVelem(vnode, newVnode, node, parentContext);
     initVchildren(newVnode, node, parentContext);
   } else {
-    // 先更新子元素，重排
+    // 先更新子组件元素，重排操作，比如那个没了把它删掉那个多了把它插进来
     updateVChildren(vnode, newVnode, node, parentContext);
     // 属性更新
     updateVelem(vnode, newVnode, node, parentContext);
@@ -77,16 +77,16 @@ function updateVnode(vnode, newVnode, node, parentContext) {
 }
 
 function updateVChildren(vnode, newVnode, node, parentContext) {
-  // 更新children，产出三个patch数组
+  // 更新children，产出三个patch补丁包数组
   let patches = {
     removes: [],
     updates: [],
     creates: [],
   };
   diffVchildren(patches, vnode, newVnode, node, parentContext);
-  _.flatEach(patches.removes, applyDestroy);
-  _.flatEach(patches.updates, applyUpdate);
-  _.flatEach(patches.creates, applyCreate);
+  _.flatEach(patches.removes, applyDestroy); // 删除
+  _.flatEach(patches.updates, applyUpdate); // 更新
+  _.flatEach(patches.creates, applyCreate); // 创建
 }
 
 function applyUpdate(data) {
@@ -96,7 +96,7 @@ function applyUpdate(data) {
   let vnode = data.vnode;
   let newNode = data.node;
 
-  // update
+  // 判断是否被忽略更新
   if (!data.shouldIgnore) {
     if (!vnode.vtype) {
       newNode.replaceData(0, newNode.length, data.newVnode);
@@ -119,7 +119,7 @@ function applyUpdate(data) {
     }
   }
 
-  // re-order
+  // re-order 重排操作拿到最新的索引位置insert
   let currentNode = newNode.parentNode.childNodes[data.index];
   if (currentNode !== newNode) {
     newNode.parentNode.insertBefore(newNode, currentNode);
@@ -128,7 +128,7 @@ function applyUpdate(data) {
 }
 
 function applyDestroy(data) {
-  destroyVnode(data.vnode, data.node);
+  destroyVnode(data.vnode, data.node); // 删除vnode
   data.node.parentNode.removeChild(data.node);
 }
 
@@ -231,6 +231,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
   let removes = null;
   let creates = null;
 
+  // 老的拿出来看看新的有没有
   for (let i = 0; i < vchildrenLen; i++) {
     let vnode = vchildren[i];
     for (let j = 0; j < newVchildrenLen; j++) {
@@ -254,7 +255,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     }
   }
 
-  // isSimilar
+  // 老的没有新的有
   for (let i = 0; i < vchildrenLen; i++) {
     let vnode = vchildren[i];
     if (vnode === null) {
@@ -282,6 +283,8 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
         break;
       }
     }
+
+    // 老的没老新的删除
     if (shouldRemove) {
       if (!removes) {
         removes = [];
@@ -305,8 +308,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
         parentContext: parentContext,
         index: i,
       });
-    } else if (item.vnode.vtype === VELEMENT) {
-      // 递归更新
+    } else if (item.vnode.vtype === VELEMENT) { // 如果发现又是个子元素，继续递归更新，可以想想把一个树形从上往下一个个递归完
       diffVchildren(
         patches,
         item.vnode,
@@ -357,6 +359,10 @@ function initVstateless(vstateless, parentContext) {
   return node;
 }
 
+/**
+ * 更新function组件
+ * 函数组件直接compareTwoVnodes直接更新
+ */
 function updateVstateless(vstateless, newVstateless, node, parentContext) {
   let uid = vstateless.uid;
   let vnode = node.cache[uid];
@@ -432,17 +438,22 @@ function initVcomponent(vcomponent, parentContext) {
   return node;
 }
 
+
+/**
+ * 更新class组件，通过updater去更新
+ * 组件都会有个uid通过uid获取缓存组件
+ * 组件的实例是缓存在真实节点上
+ */
 function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
-  // 更新组件
   let uid = vcomponent.uid;
-  let component = node.cache[uid]; // 拿到组件实例
+  let component = node.cache[uid]; // 拿到组件实例，就可以拿到当前组件的updater更新器去做更新操作
   let { $updater: updater, $cache: cache } = component;
   let { type: Component, props: nextProps } = newVcomponent;
   let componentContext = getContextByTypes(
     parentContext,
     Component.contextTypes
   );
-  delete node.cache[uid];
+  delete node.cache[uid]; // 删除之前的缓存最新组件
   node.cache[newVcomponent.uid] = component;
   cache.parentContext = parentContext;
   if (component.componentWillReceiveProps) {
@@ -554,21 +565,27 @@ export function clearPending() {
   clearPendingComponents();
 }
 
-// diff发生的地方
+/**
+ * Diff发生的地方
+ * diff 策略：
+ * 1. 同级⽐较，Web UI 中 DOM 节点跨层级的移动操作特别少，可以忽略不计。
+ * 2. 拥有不同类型的两个组件将会⽣成不同的树形结构。例如：div->p, CompA->CompB
+ * 3. 开发者可以通过 key prop 来暗示哪些⼦元素在不同的渲染下能保持稳定；
+ * 三个操作：删除、替换和更新，没有新增操作，vue有，因为入口初始化的时候
+ */
 export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
   let newNode = node;
-  // 三个操作：删除、替换和更新
   if (newVnode == null) {
-    // remove 新的节点没有了删除
-    destroyVnode(vnode, node);
+    // remove -> 新的节点没有了删除
+    destroyVnode(vnode, node); // old的vnode删掉
     node.parentNode.removeChild(node);
   } else if (vnode.type !== newVnode.type || vnode.key !== newVnode.key) {
-    // replace vnode和newVnode类型不同或key不同时
+    // replace -> vnode和newVnode类型不同或key不同时
     destroyVnode(vnode, node);
     newNode = initVnode(newVnode, parentContext);
     node.parentNode.replaceChild(newNode, node);
   } else if (vnode !== newVnode || parentContext) {
-    // same type and same key -> update
+    // same type and same key -> 认为是相同节点 update
     // 操作：属性更新、更新children 类型vue patch
     newNode = updateVnode(vnode, newVnode, node, parentContext);
   }
