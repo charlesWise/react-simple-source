@@ -72,7 +72,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
   delete pendingRendering[id];
 
   /**
-   * 上面的appendChild是把父组件的追加进去了，剩下子组件处理，需要做批量更新batchUpdate
+   * 上面的appendChild是把父组件的追加进去了，剩下子组件处理，需要做批量更新batchUpdate体现出它的异步性
    */
   let result = null;
   if (typeof argsCache === "object") {
@@ -91,7 +91,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
   if (!isPending) {
 		updateQueue.isPending = false;
     /**
-     * batchUpdate应用场景第一个启动点，还有个是setState时候用户点击事件的启动点event-system中
+     * 这里应用场景第一个启动点，还有个是setState时候用户点击事件的启动点event-system中
      * 生命周期钩子做定时器或者原生事件去激活了setState，这个时候不会异步的行为他们会立刻更新，因为他们没有经过react的合成事件封装
      * 让队列里面子组件做批量更新，这个时候所有的子组件去更新下自己
      */
