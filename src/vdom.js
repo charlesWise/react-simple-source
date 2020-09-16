@@ -17,7 +17,6 @@ export default function initVNode(vnode) {
 
 function createElement(vnode) {
   const { type, props } = vnode;
-  console.log(props)
   const node = document.createElement(type);
   const { ref, key, children, ...rest } = props;
   Object.keys(rest).forEach(k => {
